@@ -1,5 +1,5 @@
-// import { POST as PostMakePlan } from '$src/routes/api/+server';
-import type { TravelPlanRequest } from './type';
+import type { ChattingMessage } from '$src/lib/types';
+import type { TravelPlanRequest, TravelPlanUpdateRequest } from './type';
 
 export class PlanApi {
   private fetchClient: typeof fetch;
@@ -8,7 +8,7 @@ export class PlanApi {
       this.fetchClient = _fetch;
   }
 
-  async postMakePlan(travelRequest: TravelPlanRequest) {
+  async postMakePlan(travelRequest: TravelPlanRequest): Promise<{messages: ChattingMessage[]}> {
     const response = await this.fetchClient('/api', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -20,7 +20,28 @@ export class PlanApi {
       throw new ApiError(result);
     }
 
-    return JSON.parse(result);
+    const jsonResponse = JSON.parse(result);
+    return {
+      messages: jsonResponse.messages,
+    };
+  }
+  
+  async updatePlan(updateRequest: TravelPlanUpdateRequest): Promise<{messages: ChattingMessage[]}> {
+    const response = await this.fetchClient('/api', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(updateRequest)
+    });
+
+    const result = await response.text();
+    if (!response.ok) {        
+      throw new ApiError(result);
+    }
+
+    const jsonResponse = JSON.parse(result);
+    return {
+      messages: jsonResponse.messages,
+    };
   }
 }
 

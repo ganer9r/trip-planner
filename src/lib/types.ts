@@ -1,3 +1,5 @@
+import type { TravelPlan } from "./domain/plan/type";
+
 export interface ItineraryItem {
   day: number;
   date: string; // 실제 날짜 (YYYY-MM-DD)
@@ -13,18 +15,13 @@ export interface TravelPlanResult {
   // 필요에 따라 추가 정보 (예: 준비물, 팁)
 }
 
-export interface Message {
-  role: 'user' | 'assistant';
-  content: string;
+export interface ChattingMessage {
+  role: 'user' | 'assistant' | 'plan';
+  content: string | TravelPlan;
   timestamp: Date;
 }
 
-export interface ChatRequest {
-  messages: Message[];
-  travelPlan: TravelPlanResult;
-}
-
 export interface ChatResponse {
-  message: Message;
+  messages: ChattingMessage[];
   updatedPlan?: TravelPlanResult;
 }

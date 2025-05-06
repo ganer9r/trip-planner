@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const TravelPlanSchema = z.object({
   title: z.string().describe("여행 계획의 제목"),
   overview: z.string().describe("여행 계획에 대한 간략한 소개"),
+  assistantMessage: z.string().describe("일정 추천 후 사용자 피드백 유도 메시지"),
   days: z.array(
       z.object({
           date: z.string().describe("여행 날짜 (예: YYYY년 MM월 DD일)"),
@@ -19,6 +20,7 @@ export const TravelPlanSchema = z.object({
            description: z.string().optional().describe("정보 출처에 대한 간략한 설명 (선택 사항)")
       })
   ).optional().describe("참조한 외부 정보 출처 목록 (URL 포함). 정보가 부족하면 빈 배열"),
+  planId: z.string().optional().describe("여행 계획의 고유 ID"),
 });
 export type TravelPlan = z.infer<typeof TravelPlanSchema>;
 
@@ -34,3 +36,11 @@ export const TravelPlanRequestSchema = z.object({
     companion: z.string().optional().describe("동행자"),
 });
 export type TravelPlanRequest = z.infer<typeof TravelPlanRequestSchema>;
+
+// 여행 계획 수정 요청을 위한 스키마
+export const TravelPlanUpdateRequestSchema = z.object({
+    planId: z.string().min(1).describe("수정할 여행 계획의 ID"),
+    message: z.string().min(1).describe("수정 요청 메시지"),
+    plan: TravelPlanSchema.optional().describe("기존 여행 계획 데이터 (선택 사항)"),
+});
+export type TravelPlanUpdateRequest = z.infer<typeof TravelPlanUpdateRequestSchema>;

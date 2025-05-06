@@ -1,12 +1,13 @@
 <script lang="ts">
 	import type { TravelPlan } from "$src/lib/domain/plan/type";
+	import type { ChattingMessage } from "$src/lib/types";
 
   type Props = {
-    plan: TravelPlan
+    message: ChattingMessage
   };
 
-  let { plan }: Props = $props();
-
+  let { message }: Props = $props();
+  let plan = $derived(message.content as TravelPlan);
 </script>
 
 <div class="plan-container">

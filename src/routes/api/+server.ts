@@ -7,6 +7,7 @@ import { langfuse, langfuseLangchainHandler } from '$lib/ai/langfuse';
 import { getModel } from '$lib/ai/model.js';
 import type { TextPromptClient } from 'langfuse';
 import { TravelPlanSchema, TravelPlanRequestSchema, type TravelPlan } from '$lib/domain/plan/type';
+import type { ChattingMessage } from '$src/lib/types';
 
 // 요청 타입 정의
 interface RequestData {
@@ -30,9 +31,22 @@ export async function POST({ request }) {
 
     const data = travelPlanRequest.data;
     const result = await handleLangfuseRequest(data);
+    const messages: ChattingMessage[] = [
+      {
+        role: 'plan',
+        content: result,
+        timestamp: new Date()
+      },
+      {
+        role: 'assistant',
+        content: result.assistantMessage,
+        timestamp: new Date()
+      },
+    ];
+    
     return json({
       success: true,
-      plan: result,
+      messages
     });
   } catch (error) {
     console.error('API 처리 오류:', error);
@@ -56,7 +70,7 @@ async function getModelWithStructuredOutput(promptConfig: PromptConfig) {
   return model.withStructuredOutput(TravelPlanSchema);
 }
 
-async function handleLangfuseRequest(requestData: RequestData) {
+async function handleLangfuseRequest(requestData: RequestData): Promise<TravelPlan> {
   return mockPlan;
   try {
     // 필수 파라미터 확인
@@ -101,6 +115,7 @@ async function handleLangfuseRequest(requestData: RequestData) {
 const mockPlan: TravelPlan = {
   "title": "사가 여행 계획",
   "overview": "사가에서 힐링을 즐기며 여유로운 시간을 보내는 여행 일정",
+  "assistantMessage": "사가 여행 계획이 완료 되었습니다, 마음에 들지 않는 부분이 있으면 수정을 요청해주세요.",
   "days": [
     {
       "date": "2025년 05월 26일",
