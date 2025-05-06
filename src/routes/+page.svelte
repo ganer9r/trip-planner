@@ -7,7 +7,7 @@
   import type { TravelPlan, TravelPlanRequest } from '$src/lib/domain/plan/type';
 	import Plan from './(ui)/Plan.svelte';
 
-
+  const { plan_id } = $props();
   const api = new PlanApi(fetch);
 
   // UI 상태 및 결과
