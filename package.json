@@ -54,6 +54,7 @@
 		"langfuse-langchain": "3.37.2",
 		"langfuse-node": "3.37.2",
 		"openai": "4.97.0",
+		"path": "0.12.7",
 		"zod": "3.24.4"
 	}
 }

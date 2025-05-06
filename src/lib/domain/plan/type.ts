@@ -20,6 +20,17 @@ export const TravelPlanSchema = z.object({
       })
   ).optional().describe("참조한 외부 정보 출처 목록 (URL 포함). 정보가 부족하면 빈 배열"),
 });
-
-// 스키마의 TypeScript 타입 추론
 export type TravelPlan = z.infer<typeof TravelPlanSchema>;
+
+
+//
+export const TravelPlanRequestSchema = z.object({
+    location: z.string().min(2).describe("목적지"),
+    startDate: z.string().min(10).describe("도착일시"),
+    endDate: z.string().min(10).describe("종료일시"),
+    keywords: z.string().min(2).optional().describe("키워드"),
+    transportation: z.string().min(2).optional().describe("이동수단"),
+    style: z.string().min(2).optional().describe("여행 스타일"),
+    companion: z.string().optional().describe("동행자"),
+});
+export type TravelPlanRequest = z.infer<typeof TravelPlanRequestSchema>;

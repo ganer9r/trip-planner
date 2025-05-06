@@ -1,11 +1,3 @@
-export interface TravelPlanRequest {
-  destination: string; // 예: "유럽" 또는 "동남아시아"
-  startDate: string;   // 예: "2024-08-01" (input type="date" 형식)
-  endDate: string;     // 예: "2024-08-10"
-  interests: string;   // 예: "역사, 음식, 하이킹"
-  travelers: number;   // 예: 2
-}
-
 export interface ItineraryItem {
   day: number;
   date: string; // 실제 날짜 (YYYY-MM-DD)
