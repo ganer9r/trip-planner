@@ -2,25 +2,21 @@
 <script lang="ts">
   import Form from './(ui)/Form.svelte';
   import { ApiError, PlanApi } from '$src/lib/domain/plan/api';
-  import type { TravelPlan, TravelPlanRequest } from '$src/lib/domain/plan/type';
+  import type { TravelPlan, TravelPlanRequest, TravelPlanUpdateRequest } from '$src/lib/domain/plan/type';
   import type { ChattingMessage, TravelPlanResult } from '$lib/types';
 	import Plan from './(ui)/Plan.svelte';
 	import dayjs from 'dayjs';
 	import Chatting from './(ui)/Chatting.svelte';
 
-  const { planId } = $props();
+  let { data } = $props();
   const api = new PlanApi(fetch);
 
   // UI 상태 및 결과
+  let { planId } = data;
   let loading = $state(false);
   let error = $state<string | null>(null);
-
-  // 채팅 관련 상태
   let messages = $state<ChattingMessage[]>([]);
-  let chatLoading = $state(false);
-  let chatError = $state<string | null>(null);
 
-  let messageInput = '';
   let travelSavedRequest: TravelPlanRequest = {
     location: '',
     startDate: '',
@@ -34,68 +30,31 @@
   let existsMessage = $derived(messages.length > 0);
   let plan = $derived([...messages].reverse().find(msg => msg.role === 'plan'));
 
-  // TravelPlan -> TravelPlanResult 변환 함수
-  function convertPlanToResult(plan: TravelPlan): TravelPlanResult {
-    // 일정 데이터를 변환
-    const itinerary = plan.days.map((day, index) => {
-      return {
-        day: index + 1,
-        date: day.date,
-        activities: [
-          `오전: ${day.morning}`,
-          `점심: ${day.lunch}`,
-          `오후: ${day.afternoon}`,
-          `저녁: ${day.evening}`
-        ]
-      };
-    });
 
-    return {
-      summary: plan.overview,
-      itinerary: itinerary
+  function addUserMessage(message: string) {
+    const userMessage: ChattingMessage = {
+      role: 'user',
+      content: message,
+      timestamp: new Date()
     };
-  }
-
-  // TravelPlanResult -> TravelPlan 변환 함수 (필요시)
-  function convertResultToPlan(result: TravelPlanResult): TravelPlan {
-    // 데이터 형태에 맞게 변환 로직 구현
-    const days = result.itinerary.map(item => {
-      // 활동 내용에서 필요한 정보 추출
-      const morning = item.activities.find(a => a.startsWith('오전:'))?.substring(4) || '';
-      const lunch = item.activities.find(a => a.startsWith('점심:'))?.substring(4) || '';
-      const afternoon = item.activities.find(a => a.startsWith('오후:'))?.substring(4) || '';
-      const evening = item.activities.find(a => a.startsWith('저녁:'))?.substring(4) || '';
-      
-      return {
-        date: item.date,
-        morning,
-        lunch,
-        afternoon,
-        evening
-      };
-    });
-
-    return {
-      title: `${travelSavedRequest.location} 여행`,
-      overview: result.summary,
-      assistantMessage: '',  // 필요한 assistantMessage 필드 추가
-      days: days
-    };
+    messages.push(userMessage);
   }
 
   // 일정 생성 폼 제출 핸들러
   async function handleSubmit(travelRequest: TravelPlanRequest) {
     travelSavedRequest = travelRequest;
+    travelSavedRequest.planId = planId;
+    
+    console.log('travelSavedRequest', travelRequest);
     loading = true;
     error = null;
 
     try {
-      const result = await api.postMakePlan(travelRequest);     
+      const result = await api.makePlan(travelRequest);
       if (result && result.messages) {        
         result.messages.forEach(message => {
           messages.push(message);
         });
-        
       }
     } catch (e) {
       if (e instanceof ApiError) {
@@ -109,63 +68,38 @@
   }
 
   // 채팅 메시지 전송 핸들러
-  async function sendMessage() {
-    if (!messageInput.trim() || chatLoading) return;
+  async function sendMessage(messageInput: string) {
+    loading = true;
+    error = null;
 
-    chatLoading = true;
-    chatError = null;
+    addUserMessage(messageInput);
 
-    // 사용자 메시지 추가
-    const userMessage: ChatMessage = {
-      role: 'user',
-      content: messageInput,
-      timestamp: new Date()
-    };
+    try {
+      const travelPlanResult = JSON.stringify(plan?.content as TravelPlan);
 
-    messages = [...messages, userMessage];
-    messageInput = ''; // 입력 필드 초기화
+      // // API 요청 데이터 준비
+      const chatRequest: TravelPlanUpdateRequest = {
+        planId: planId,
+        feedback: messageInput,
+        plan: travelPlanResult,
+        travelRequest: travelSavedRequest
+      };
 
-    // try {
-    //   // 타입 변환
-    //   const travelPlanResult = convertPlanToResult(plan);
-
-    //   // API 요청 데이터 준비
-    //   const chatRequest: ChatRequest = {
-    //     messages: messages,
-    //     travelPlan: travelPlanResult
-    //   };
-        
-    //   // API 요청
-    //   const response = await fetch('/api', {
-    //     method: 'POST',
-    //     headers: {
-    //       'Content-Type': 'application/json'
-    //     },
-    //     body: JSON.stringify(chatRequest)
-    //   });
-      
-    //   if (!response.ok) {
-    //     const errorData = await response.json();
-    //     throw new Error(errorData.error || `HTTP 오류! 상태 코드: ${response.status}`);
-    //   }
-      
-    //   // 응답 처리
-    //   const result: ChatResponse = await response.json();
-      
-    //   // 응답 메시지 추가
-    //   messages = [...messages, result.message];
-      
-    //   // 업데이트된 계획이 있으면 반영
-    //   if (result.updatedPlan) {
-    //     const updatedPlan = convertResultToPlan(result.updatedPlan);
-    //     plan = updatedPlan;
-    //   }
-    // } catch (e: any) {
-    //     chatError = e.message;
-    //     console.error('채팅 메시지 전송 중 오류 발생:', e);
-    // } finally {
-    //     chatLoading = false;
-    // }
+      const result = await api.updatePlan(chatRequest);
+      if (result && result.messages) {        
+        result.messages.forEach(message => {
+          messages.push(message);
+        });
+      }
+    } catch (e) {
+      if (e instanceof ApiError) {
+        error = e.title;
+      } else {
+        error = '알 수 없는 오류가 발생했습니다.';
+      }
+    } finally {
+      loading = false;
+    }
   }
 
 </script>
@@ -186,7 +120,11 @@
         <Plan message={plan} />
       {/if}
 
-      <Chatting messages={messages} />
+      <Chatting 
+        messages={messages} 
+        onSendMessage={sendMessage}
+        {loading}
+      />
 
     </div>
   {/if}

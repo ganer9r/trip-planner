@@ -8,7 +8,7 @@ export class PlanApi {
       this.fetchClient = _fetch;
   }
 
-  async postMakePlan(travelRequest: TravelPlanRequest): Promise<{messages: ChattingMessage[]}> {
+  async makePlan(travelRequest: TravelPlanRequest): Promise<{messages: ChattingMessage[]}> {
     const response = await this.fetchClient('/api', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},

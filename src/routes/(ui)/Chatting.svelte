@@ -4,23 +4,26 @@
 
   type Props = {
     messages: ChattingMessage[];
+    loading: boolean;
+    onSendMessage: (message: string) => void;
   };
 
-  let { messages }: Props = $props();
+  let { messages, loading, onSendMessage }: Props = $props();
 
   let chatLoading = $state(false);
   let chatError = $state<string | null>(null);
   let messageInput = $state('');
 
   function handleKeyDown(event: KeyboardEvent) {
-    if (event.key === 'Enter' && !event.shiftKey) {
+    if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { //문자조합 체크
       event.preventDefault();
-      // sendMessage();
+      sendMessage();
      }
   }
 
   function sendMessage() {
-    
+    if (!messageInput.trim() || chatLoading) return;
+    onSendMessage(messageInput);
   }
 
   function formatMessageTime(timestamp: string | Date): string {
@@ -47,9 +50,9 @@
         {/if}
       {/each}
       
-      {#if chatLoading}
+      {#if loading}
         <div class="chat-message assistant loading">
-          <div class="loading-indicator">응답 중...</div>
+          <div class="loading-indicator">생각 중...</div>
         </div>
       {/if}
     </div>
@@ -157,12 +160,12 @@
   }
   
   .loading-indicator {
-    animation: pulse 1.5s infinite ease-in-out;
+    animation: pulse 1s infinite ease-in-out;
   }
 
   @keyframes pulse {
-    0% { opacity: 0.6; }
+    0% { opacity: 0.4; }
     50% { opacity: 1; }
-    100% { opacity: 0.6; }
+    100% { opacity: 0.4; }
   }
 </style>

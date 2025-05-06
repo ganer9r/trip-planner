@@ -27,6 +27,7 @@ export type TravelPlan = z.infer<typeof TravelPlanSchema>;
 
 //
 export const TravelPlanRequestSchema = z.object({
+    planId: z.string().optional().describe("여행 계획의 고유 ID"),
     location: z.string().min(2).describe("목적지"),
     startDate: z.string().min(10).describe("도착일시"),
     endDate: z.string().min(10).describe("종료일시"),
@@ -39,8 +40,9 @@ export type TravelPlanRequest = z.infer<typeof TravelPlanRequestSchema>;
 
 // 여행 계획 수정 요청을 위한 스키마
 export const TravelPlanUpdateRequestSchema = z.object({
-    planId: z.string().min(1).describe("수정할 여행 계획의 ID"),
-    message: z.string().min(1).describe("수정 요청 메시지"),
-    plan: TravelPlanSchema.optional().describe("기존 여행 계획 데이터 (선택 사항)"),
+    planId: z.string().optional().describe("여행 계획의 고유 ID"),
+    feedback: z.string().min(1).describe("수정 요청 메시지"),
+    plan: z.string().optional().describe("기존 여행 계획 데이터 (선택 사항)"),
+    travelRequest: TravelPlanRequestSchema
 });
 export type TravelPlanUpdateRequest = z.infer<typeof TravelPlanUpdateRequestSchema>;
