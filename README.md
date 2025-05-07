@@ -1,38 +1,71 @@
-# sv
+# 여행 플래너
+여형지의 정보를 입력하면 그에 맞는 여행 계획을 생성해줍니다.
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+### 하는 일
+- 날씨를 검색합니다.
+- 여행지의 블로그 포스트를 검색합니다.
+- 여행지 추천 정보를 생성합니다.
+- 여행지 추천 정보에 따른 호텔을 검색하여 추천합니다.
+- 여행지 추천 정보에 따른 레스토랑을 검색하여 추천합니다.
 
-## Creating a project
 
-If you're seeing this, you've probably already done this step. Congrats!
+### 할일
+- [x] langfuse 를 이용해서 프롬프트 생성
+  - [x] 여행 계획 생성
+  - [x] 여행 계획 수정
+- [x] 추천 정보 요청 및 결과
+  - [x] llm API 연동
+    - [x] open ai
+    - [ ] gemini
+    - [ ] grok
+  - [x] 수정 요청시 기존 여행 계획 정보 전달
+  - [x] langfuse 에 trace 추가
+  - [x] langchain 으로 JSON으로 결과 요청
+- [ ] tool 추가
+  - [ ] 날씨 검색
+  - [ ] 블로그 포스트 검색
+- [ ] 결과 매핑
+  - [ ] 추천정보의 반경 x km 기준으로 호텔 검색 
+  - [ ] 추천정보의 반경 1 km 기준으로 레스토랑 검색
+- [ ] A2A를 위한 방법
+  - [ ] 블로그 포스트 검색 Agent 구현
+    - [ ] RAG 모델 사용 (매번 포스트를 검색할 필요는 없음.)
+      - [ ] 임베딩
+      - [ ] 벡터검색
+  - [ ] 호텔 검색 Agent 구현
+  - [ ] 레스토랑 검색 Agent 구현
 
-```bash
-# create a new project in the current directory
-npx sv create
 
-# create a new project in my-app
-npx sv create my-app
-```
+### 작업하면서 배운 것
+- langfuse는 LLM 호출 기록 및 관리를 위한 것으로, 관련서비스를 사용하려면 왠만하면 사용해야 할 것 같음.
+  - langfuse에서 LLM api 도 호출 하는 줄 알았지만, 기록관리만 해 주는 것으로 보임.
+  - 아래 역할을 해주는데 시간상 일부만 확인해 봄
+    - 프롬프트 관리
+    - 호출 trace 관리
+    - 세션 trace 관리
+    - 결과 평가 (이 부분을 확인 못 해봄)
+- langchain 이 프롬프트 관리를 쉽게 해줌.
+  - LLM chain를 langchain으로 사용하는 것이 좋음.
+  - tools를 사용하려면 langchain을 이용해야 하는 듯 함.
+    - output schema와 tools가 충돌나서 테스트는 못 해봄.
+    - langchain v0.3 이후부터는 agent보다 graph 이용을 추천 하는 듯 함.
+    - tools와 graph 부터 agentic 시스템이라고 생각됨.
 
-## Developing
+- 경험 했지만 아직 감이 안 잡히는 것.
+  - 프롬프트는 chat/text로 나뉘는데 text보다 chat이 유리한 이유를 모르겠음.
+  - 요청 할때마다 새로운 요청을 해야 하는데, text 가 더 직관적인것 아닌가?
+    - 아마도 관련된 지식이 부족해서 잘못 사용하고 있을것으로 생각 됨. 
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+- 일반적으로 feature를 쪼개면서 진행하는 것이 좋으나,
+  - LLM과 같이 관련지식이 적은 신규 작업을 할 때에는,
+  - 러프하게 동작하는것을 확인하며 고도화 해야 할 것 같음.
+  - 초반에 agentic 시스템을 생각하며 구조 잡아 놓은 것은 모두 버리게 되었음.
+  - 실제로 LLM 으로 최초 응답을 받은 이후부터 진행이 되었음.
+  - 그럼에도 langfuse 로 시작한 것은 여러모로 괜찮았다고 생각됨.
 
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+### 작업 전 리서칭과 차이점
+- 아래 모두 다른 것으로 보였으나, LangChain 프레임워크의 일부로 보임
+  - LangChain
+  - LangChain Agent
+  - LangGraph
+- 현재 agentic 시스템을 구현하기 위해서는, 단계별로 가는게 아니고 LangChain 을 바탕으로 점진적으로 개발해 가야 할 것으로 생각됨.
