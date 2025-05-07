@@ -1,5 +1,5 @@
 import { researchCitiesTask, selectCityTask, generateItineraryTask } from './agents';
-import type { TravelPlanRequest, TravelPlanResult } from '../types';
+import type { TravelPlanResult } from '../types';
 
 export async function planTravel(request: TravelPlanRequest): Promise<TravelPlanResult> {
     console.log('오케스트레이터: 여행 계획 생성 프로세스 시작', request);

@@ -8,7 +8,6 @@ import { error } from "@sveltejs/kit";
 import type { TextPromptClient } from "langfuse";
 
 export async function handleUpdatePlanLangfuseRequest(requestData: TravelPlanUpdateRequest): Promise<TravelPlan | undefined> {
-  // console.log('requestData', requestData);
   // await new Promise(resolve => setTimeout(resolve, 5000));
   // return mockPlan;
 

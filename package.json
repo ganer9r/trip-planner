@@ -51,6 +51,7 @@
 		"@langchain/core": "0.3.51",
 		"@langchain/openai": "0.5.10",
 		"dayjs": "1.11.13",
+		"langchain": "0.3.24",
 		"langfuse": "3.37.2",
 		"langfuse-langchain": "3.37.2",
 		"langfuse-node": "3.37.2",

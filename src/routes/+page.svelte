@@ -5,7 +5,6 @@
   import type { TravelPlan, TravelPlanRequest, TravelPlanUpdateRequest } from '$src/lib/domain/plan/type';
   import type { ChattingMessage, TravelPlanResult } from '$lib/types';
 	import Plan from './(ui)/Plan.svelte';
-	import dayjs from 'dayjs';
 	import Chatting from './(ui)/Chatting.svelte';
 
   let { data } = $props();
@@ -107,7 +106,10 @@
 <div class="container">
   <h1>AI 여행 플래너</h1>
   {#if !existsMessage}
-    <Form onInputCompleted={handleSubmit} />
+    <Form 
+      {loading}
+      onInputCompleted={handleSubmit} 
+    />
   {/if}
 
   {#if error}

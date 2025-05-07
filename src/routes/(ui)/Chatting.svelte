@@ -24,6 +24,7 @@
   function sendMessage() {
     if (!messageInput.trim() || chatLoading) return;
     onSendMessage(messageInput);
+    messageInput = '';
   }
 
   function formatMessageTime(timestamp: string | Date): string {

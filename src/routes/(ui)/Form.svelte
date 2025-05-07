@@ -2,13 +2,13 @@
 	import type { TravelPlanRequest } from "$src/lib/domain/plan/type";
 
   type Props = {
+    loading: boolean;
     onInputCompleted: (travelRequest: TravelPlanRequest) => void
   };
 
-  let {onInputCompleted}: Props = $props();
+  let {loading, onInputCompleted}: Props = $props();
 
   // UI 상태 및 결과
-  let loading = $state(false);
   let error = $state<string | null>(null);
 
   let travelPlan: TravelPlanRequest = {
@@ -25,8 +25,7 @@
   function validateTravelRequest(travelRequest: TravelPlanRequest) {
     if (new Date(travelRequest.startDate) > new Date(travelRequest.endDate)) {
       error = '시작일은 종료일보다 빠르거나 같아야 합니다.';
-      loading = false;
-      return;
+      return false;
     }
 
     return true;
