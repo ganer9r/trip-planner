@@ -11,6 +11,9 @@ importers:
       '@langchain/core':
         specifier: 0.3.51
         version: 0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4))
+      '@langchain/langgraph':
+        specifier: 0.3.6
+        version: 0.3.6(@langchain/core@0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4)))(zod-to-json-schema@3.24.5(zod@3.24.4))
       '@langchain/openai':
         specifier: 0.5.10
         version: 0.5.10(@langchain/core@0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4)))(ws@8.18.2)
@@ -405,6 +408,33 @@ packages:
   '@langchain/core@0.3.51':
     resolution: {integrity: sha512-2nE30uuomSQrIQKB3BLgQtECZLWj5gwPEzQ+I6Ot6s9DKd133nXp3eZeggkAJ/uuc4WVROYVNJnmxepeAWo02Q==}
     engines: {node: '>=18'}
+
+  '@langchain/langgraph-checkpoint@0.0.18':
+    resolution: {integrity: sha512-IS7zJj36VgY+4pf8ZjsVuUWef7oTwt1y9ylvwu0aLuOn1d0fg05Om9DLm3v2GZ2Df6bhLV1kfWAM0IAl9O5rQQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@langchain/core': '>=0.2.31 <0.4.0'
+
+  '@langchain/langgraph-sdk@0.0.88':
+    resolution: {integrity: sha512-/W5VXmVpbeFkFdCSjGSSOXdGDzBzyc5NR7Q4ZkGvcR0cykpEi+s5s3ig4cBPALRjZzD/+PxWicK+vcIkTHhJJQ==}
+    peerDependencies:
+      '@langchain/core': '>=0.2.31 <0.4.0'
+      react: ^18 || ^19
+    peerDependenciesMeta:
+      '@langchain/core':
+        optional: true
+      react:
+        optional: true
+
+  '@langchain/langgraph@0.3.6':
+    resolution: {integrity: sha512-TMRUEPb/eC5mS8XdY6gwLGX2druwFDxSWUQDXHHNsbrqhIrL3BPlw+UumjcKBQ8wvhk3gEspg4aHXGq8mAqbRA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@langchain/core': '>=0.3.58 < 0.4.0'
+      zod-to-json-schema: ^3.x
+    peerDependenciesMeta:
+      zod-to-json-schema:
+        optional: true
 
   '@langchain/openai@0.5.10':
     resolution: {integrity: sha512-hBQIWjcVxGS7tgVvgBBmrZ5jSaJ8nu9g6V64/Tx6KGjkW7VdGmUvqCO+koiQCOZVL7PBJkHWAvDsbghPYXiZEA==}
@@ -2231,6 +2261,10 @@ packages:
     resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
     hasBin: true
 
+  uuid@9.0.1:
+    resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    hasBin: true
+
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
@@ -2405,6 +2439,9 @@ packages:
 
   zod@3.24.4:
     resolution: {integrity: sha512-OdqJE9UDRPwWsrHjLN2F8bPxvwJBK22EHLWtanu0LSYr5YqzsaaW3RMgmjwr8Rypg5k+meEJdSPXJZXE/yqOMg==}
+
+  zod@3.25.67:
+    resolution: {integrity: sha512-idA2YXwpCdqUSKRCACDE6ItZD9TZzy3OZMtpfLoh6oPR47lipysRrJfjzMqFxQ3uJuUPyUeWe1r9vLH33xO/Qw==}
 
 snapshots:
 
@@ -2624,6 +2661,32 @@ snapshots:
       zod-to-json-schema: 3.24.5(zod@3.24.4)
     transitivePeerDependencies:
       - openai
+
+  '@langchain/langgraph-checkpoint@0.0.18(@langchain/core@0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4)))':
+    dependencies:
+      '@langchain/core': 0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4))
+      uuid: 10.0.0
+
+  '@langchain/langgraph-sdk@0.0.88(@langchain/core@0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4)))':
+    dependencies:
+      '@types/json-schema': 7.0.15
+      p-queue: 6.6.2
+      p-retry: 4.6.2
+      uuid: 9.0.1
+    optionalDependencies:
+      '@langchain/core': 0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4))
+
+  '@langchain/langgraph@0.3.6(@langchain/core@0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4)))(zod-to-json-schema@3.24.5(zod@3.24.4))':
+    dependencies:
+      '@langchain/core': 0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4))
+      '@langchain/langgraph-checkpoint': 0.0.18(@langchain/core@0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4)))
+      '@langchain/langgraph-sdk': 0.0.88(@langchain/core@0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4)))
+      uuid: 10.0.0
+      zod: 3.25.67
+    optionalDependencies:
+      zod-to-json-schema: 3.24.5(zod@3.24.4)
+    transitivePeerDependencies:
+      - react
 
   '@langchain/openai@0.5.10(@langchain/core@0.3.51(openai@4.97.0(ws@8.18.2)(zod@3.24.4)))(ws@8.18.2)':
     dependencies:
@@ -4352,6 +4415,8 @@ snapshots:
 
   uuid@10.0.0: {}
 
+  uuid@9.0.1: {}
+
   vary@1.1.2: {}
 
   vite-node@3.1.2(@types/node@18.19.87)(jiti@2.4.2)(lightningcss@1.29.2)(yaml@2.7.1):
@@ -4492,3 +4557,5 @@ snapshots:
       zod: 3.24.4
 
   zod@3.24.4: {}
+
+  zod@3.25.67: {}
