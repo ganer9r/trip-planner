@@ -5,8 +5,10 @@ import { TravelPlanSchema, type TravelPlan, type TravelPlanRequest } from "$src/
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { error } from "@sveltejs/kit";
 import type { TextPromptClient } from "langfuse";
-import { searchWeatherTool, BlogAnalyzerAgent } from "$src/lib/ai/agents";
-import type { AnalyzedBlogResult } from "$src/lib/ai/agents/blog-analyzer/types";
+import { WeatherAgent } from "$src/lib/ai/agents/weather/agent";
+import { BlogAnalyzerAgent } from "$src/lib/ai/agents";
+import type { DailyWeatherData } from "$src/lib/ai/agents/weather/types";
+import type { RankedPlace } from "$src/lib/ai/agents/blog-analyzer/types";
 
 export async function handleMakePlanLangfuseRequest(requestData: TravelPlanRequest): Promise<TravelPlan | undefined> {
   try {
@@ -23,13 +25,15 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
 
     // 1단계: 도구들을 사용하여 정보 수집
     console.log('🔧 도구를 사용하여 정보 수집 중...');
-    
-    const weatherTool = searchWeatherTool();
+
     const blogAgent = new BlogAnalyzerAgent();
     const blogTool = blogAgent.tool();
 
+    const weatherAgent = new WeatherAgent();
+    const weatherTool = weatherAgent.tool();
+
     // 병렬로 도구 호출
-    const [weatherInfo, blogAnalysisResults] = await Promise.all([
+    const [weatherInfoRaw, blogAnalysisResultsRaw] = await Promise.all([
       weatherTool.invoke({
         location: requestData.location,
         startDate: requestData.startDate,
@@ -42,11 +46,40 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
         location: requestData.location
       }).catch(e => {
         console.error('블로그 도구 호출 실패:', e);
-        return []; // 실패 시 빈 배열 반환
+        return JSON.stringify([]); // 실패 시 빈 배열 JSON 문자열 반환
       })
     ]);
 
-    const formattedBlogInfo = formatAnalyzedBlogResults(blogAnalysisResults);
+    let weatherInfo: DailyWeatherData[] = [];
+    if (typeof weatherInfoRaw === 'string') {
+      try {
+        const parsed = JSON.parse(weatherInfoRaw);
+        if (Array.isArray(parsed)) {
+          weatherInfo = parsed;
+        } else {
+          console.error('날씨 정보가 배열이 아닙니다:', parsed);
+        }
+      } catch (e) {
+        console.error('날씨 정보 파싱 실패:', e);
+      }
+    }
+
+    let blogAnalysisResults: RankedPlace[] = [];
+    if (typeof blogAnalysisResultsRaw === 'string') {
+      try {
+        const parsed = JSON.parse(blogAnalysisResultsRaw);
+        if (Array.isArray(parsed)) {
+          blogAnalysisResults = parsed;
+        } else {
+          console.error('블로그 분석 결과가 배열이 아닙니다:', parsed);
+        }
+      } catch (e) {
+        console.error('블로그 분석 결과 파싱 실패:', e);
+      }
+    }
+
+    const formattedWeatherInfo = formatWeatherInfo(weatherInfo);
+    const formattedBlogInfo = formatRankedPlaces(blogAnalysisResults);
 
     console.log('✅ 도구 호출 완료:', { 
       weatherInfoLength: weatherInfo.length, 
@@ -56,7 +89,7 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
     // 2단계: 수집된 정보를 사용하여 LLM이 여행 계획 생성
     console.log('📝 수집된 정보로 여행 계획 생성 중...');
     
-    const result = await generateTravelPlanWithTools(requestData, { weatherInfo, blogInfo: formattedBlogInfo });
+    const result = await generateTravelPlanWithTools(requestData, { weatherInfo: formattedWeatherInfo, blogInfo: formattedBlogInfo });
 
     if (result) {
       console.log('✅ 여행 계획 생성 완료');
@@ -131,24 +164,36 @@ The tools have already done the research - now use their results to create the b
   return promptTemplate;
 }
 
-function formatAnalyzedBlogResults(results: AnalyzedBlogResult[]): string {
-  if (!results || results.length === 0) {
-    return "블로그 분석 결과가 없습니다.";
+function formatRankedPlaces(rankedPlaces: RankedPlace[]): string {
+  if (!rankedPlaces || rankedPlaces.length === 0) {
+    return "추천 장소 정보가 없습니다.";
   }
 
   let formatted = "";
-  results.forEach((blog, index) => {
-    formatted += `\n--- 분석된 블로그 ${index + 1} ---\n`;
-    formatted += `제목: ${blog.title}\n`;
-    formatted += `URL: ${blog.originalUrl}\n`;
-    formatted += `요약: ${blog.summary}\n`;
-    if (blog.extractedEntities && blog.extractedEntities.length > 0) {
-      formatted += `핵심 엔티티:\n`;
-      blog.extractedEntities.forEach((entity) => {
-        formatted += `  - ${entity.name} (${entity.type}): ${entity.description}\n`;
-      });
+  rankedPlaces.forEach((place, index) => {
+    formatted += `\n--- 추천 장소 ${index + 1} ---\n`;
+    formatted += `이름: ${place.name}\n`;
+    formatted += `점수: ${place.score}\n`;
+    formatted += `설명: ${place.description}\n`;
+    if (place.keywords && place.keywords.length > 0) {
+      formatted += `키워드: ${place.keywords.join(', ')}\n`;
     }
-    formatted += `관련성 점수: ${blog.relevanceScore}\n`;
+    formatted += `출처: ${place.sourceUrl}\n`;
+  });
+  return formatted;
+}
+
+function formatWeatherInfo(weatherData: DailyWeatherData[]): string {
+  if (!weatherData || weatherData.length === 0) {
+    return "날씨 정보가 없습니다.";
+  }
+
+  let formatted = "";
+  weatherData.forEach((day) => {
+    formatted += `\n날짜: ${day.date}\n`;
+    formatted += `최고/최저 기온: ${day.temp_high}°C / ${day.temp_low}°C\n`;
+    formatted += `상태: ${day.condition}\n`;
+    formatted += `강수 확률: ${day.precipitation_prob}%\n`;
   });
   return formatted;
 }
