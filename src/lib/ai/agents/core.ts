@@ -1,3 +1,5 @@
+import { DynamicStructuredTool } from "@langchain/core/tools";
+
 /**
  * 모든 에이전트의 공통 입력 인터페이스입니다.
  * 각 에이전트의 특정 입력은 이 인터페이스를 확장합니다.
@@ -34,4 +36,10 @@ export abstract class Agent<TInput extends BaseAgentInput, TOutput extends BaseA
    * @returns 에이전트 실행 결과
    */
   abstract run(input: TInput): Promise<TOutput>;
+
+  /**
+   * LangChain 도구로 사용할 수 있는 tool을 반환합니다.
+   * @returns DynamicStructuredTool 인스턴스
+   */
+  abstract tool(): DynamicStructuredTool;
 }

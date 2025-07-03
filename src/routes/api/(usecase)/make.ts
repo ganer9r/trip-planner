@@ -5,9 +5,8 @@ import { TravelPlanSchema, type TravelPlan, type TravelPlanRequest } from "$src/
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { error } from "@sveltejs/kit";
 import type { TextPromptClient } from "langfuse";
-import { searchWeatherTool } from "$src/lib/ai/agents";
-import { searchBlogTool } from "$src/lib/ai/agents/blog-analyzer/searchBlogTool";
-import type { AnalyzedBlogResult } from "$src/lib/ai/agents/blog-analyzer/agent";
+import { searchWeatherTool, BlogAnalyzerAgent } from "$src/lib/ai/agents";
+import type { AnalyzedBlogResult } from "$src/lib/ai/agents/blog-analyzer/types";
 
 export async function handleMakePlanLangfuseRequest(requestData: TravelPlanRequest): Promise<TravelPlan | undefined> {
   try {
@@ -26,7 +25,8 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
     console.log('🔧 도구를 사용하여 정보 수집 중...');
     
     const weatherTool = searchWeatherTool();
-    const blogTool = searchBlogTool();
+    const blogAgent = new BlogAnalyzerAgent();
+    const blogTool = blogAgent.tool();
 
     // 병렬로 도구 호출
     const [weatherInfo, blogAnalysisResults] = await Promise.all([
@@ -144,7 +144,7 @@ function formatAnalyzedBlogResults(results: AnalyzedBlogResult[]): string {
     formatted += `요약: ${blog.summary}\n`;
     if (blog.extractedEntities && blog.extractedEntities.length > 0) {
       formatted += `핵심 엔티티:\n`;
-      blog.extractedEntities.forEach(entity => {
+      blog.extractedEntities.forEach((entity) => {
         formatted += `  - ${entity.name} (${entity.type}): ${entity.description}\n`;
       });
     }

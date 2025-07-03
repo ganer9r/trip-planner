@@ -1,6 +1,6 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
-import { searchBlogTool } from "./agents/blog-analyzer/searchBlogTool";
+import { BlogAnalyzerAgent } from "./agents/blog-analyzer/agent";
 
 //
 function searchWeatherTool() {
@@ -38,4 +38,4 @@ async function _searchWeatherRange(input: { location: string; startDate: string;
   return results.join('\n');
 }
 
-export { searchWeatherTool, searchBlogTool };
+export { searchWeatherTool, BlogAnalyzerAgent };
