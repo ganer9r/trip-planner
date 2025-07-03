@@ -1,15 +1,15 @@
 import { langfuse } from "$src/lib/ai/langfuse";
-import { getModel } from "$src/lib/ai/model";
-import type { PromptConfig } from "$src/lib/ai/type";
 import { TravelPlanSchema, type TravelPlan, type TravelPlanRequest } from "$src/lib/domain/plan/type";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { error } from "@sveltejs/kit";
 import { WeatherAgent } from "$src/lib/ai/agents/weather/agent";
-import { BlogAnalyzerAgent } from "$src/lib/ai/agents";
-import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
-// import { ChatOpenAI } from "@langchain/openai"; // 직접 임포트 대신 getModel 사용
 import { DynamicStructuredTool } from '@langchain/core/tools';
+import { AgentExecutor, createOpenAIFunctionsAgent } from "langchain/agents";
+
 import { z } from 'zod';
+import type { TextPromptClient } from "langfuse";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import type { PromptConfig } from "$src/lib/ai/type";
+import { getModel } from "$src/lib/ai/model";
 
 // 최종 구조화된 출력을 위한 도구 정의
 class FinalPlanTool {
@@ -17,10 +17,10 @@ class FinalPlanTool {
     return new DynamicStructuredTool({
       name: 'output_travel_plan',
       description: 'Call this tool with the complete and final structured travel plan in JSON format, adhering strictly to the TravelPlanSchema. This is the final step after gathering all necessary information and formulating the plan.',
-      schema: TravelPlanSchema, // TravelPlanSchema를 도구의 입력 스키마로 사용
+      schema: TravelPlanSchema,
       func: async (plan: z.infer<typeof TravelPlanSchema>) => {
         console.log('✅ LLM called output_travel_plan tool with structured plan.');
-        return plan; // 객체 자체를 반환
+        return plan;
       },
     });
   }
@@ -46,36 +46,28 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
 
     console.log('🔧 AgentExecutor를 사용하여 정보 수집 및 최종 구조화된 계획 생성 중...');
 
-    const blogAgent = new BlogAnalyzerAgent();
+    // const blogAgent = new BlogAnalyzerAgent();
     const weatherAgent = new WeatherAgent();
     const finalPlanTool = new FinalPlanTool();
 
     const tools = [
       weatherAgent.tool(),
-      blogAgent.tool(),
+      // blogAgent.tool(),
       finalPlanTool.tool()
     ];
 
     // Langfuse에서 프롬프트 가져오기 및 모델 설정
     const prompt = await langfuse.getPrompt('travel-planner');
+    const promptTemplate = await getMakePlanPromptTemplate(prompt);
     const promptConfig = (prompt.config || {}) as PromptConfig;
     
     // getModel 함수를 사용하여 LLM 인스턴스 가져오기
-    // getModel 함수가 Langfuse 콜백을 자동으로 주입하거나,
-    // 여기서 명시적으로 콜백을 추가해야 할 수 있습니다.
-    // Langchain의 Langfuse 통합은 일반적으로 LLM 생성 시 콜백을 처리합니다.
-    const agentLlm = getModel(promptConfig); 
-
-    const agentPrompt = ChatPromptTemplate.fromMessages([
-      ["system", `You are an advanced travel planner. Your task is to create a comprehensive and structured travel plan.\n\nFirst, use the 'get_weather_forecast' tool to get weather information for the specified location and dates.\nThen, use the 'blog_analyzer' tool to find popular places and insights from travel blogs for the location.\n\nOnce you have gathered all necessary information and formulated the complete travel plan, you MUST call the 'output_travel_plan' tool with the final structured JSON plan. Ensure the plan strictly adheres to the provided schema. Do not output any other text or JSON outside of the tool call.`],
-      ["human", "Create a travel plan for {location} from {startDate} to {endDate} with keywords {keywords} and transportation {transportation} for {companion} with style {style}."],
-      ["placeholder", "{agent_scratchpad}"],
-    ]);
+    const agentLlm = getModel(promptConfig);
 
     const agent = await createOpenAIFunctionsAgent({
       llm: agentLlm,
       tools,
-      prompt: agentPrompt,
+      prompt: promptTemplate,
     });
 
     const agentExecutor = new AgentExecutor({
@@ -90,10 +82,12 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
       input: { requestData },
     });
 
+    // 날짜 범위를 문자열로 변환
+    const dateRanges = `${requestData.startDate}부터 ${requestData.endDate}까지`;
+    
     const result = await agentExecutor.invoke({
       location: requestData.location,
-      startDate: requestData.startDate,
-      endDate: requestData.endDate,
+      date_ranges: dateRanges,
       keywords: requestData.keywords,
       transportation: requestData.transportation,
       companion: requestData.companion,
@@ -111,6 +105,7 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
       trace.update({ output: finalStructuredPlan });
       return finalStructuredPlan as TravelPlan;
     }
+    
     trace.update({ output: "No plan generated" });
     return undefined;
 
@@ -120,6 +115,24 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
     trace.update({ output: { error: errorMessage } });
     error(500, '요청을 처리하는 중 오류가 발생했습니다.');
   } finally {
-    await langfuse.flushAsync(); // 비동기적으로 Langfuse 데이터 전송
+    await langfuse.flushAsync();
   }
+}
+
+async function getMakePlanPromptTemplate(prompt: TextPromptClient) {
+  const promptData = prompt.getLangchainPrompt();
+  console.log('🔍 PromptTemplate:', promptData);
+  
+  // promptData의 타입에 따라 적절히 처리
+  let promptTemplate: ChatPromptTemplate;
+  
+  if (Array.isArray(promptData)) {
+    // 배열 형태의 메시지를 그대로 사용 (agent_scratchpad 추가 안함)
+    promptTemplate = ChatPromptTemplate.fromMessages(promptData);
+  } else {
+    // 문자열 형태의 템플릿을 그대로 사용
+    promptTemplate = ChatPromptTemplate.fromTemplate(promptData);
+  }
+
+  return promptTemplate;
 }
