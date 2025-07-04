@@ -1,4 +1,4 @@
-import { langfuse } from "$src/lib/ai/langfuse";
+import { langfuse, langfuseLangchainHandler } from "$src/lib/ai/langfuse";
 import { TravelPlanSchema, type TravelPlan, type TravelPlanRequest } from "$src/lib/domain/plan/type";
 import { error } from "@sveltejs/kit";
 import { WeatherAgent } from "$src/lib/ai/agents/weather/agent";
@@ -10,6 +10,15 @@ import type { TextPromptClient } from "langfuse";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import type { PromptConfig } from "$src/lib/ai/type";
 import { getModel } from "$src/lib/ai/model";
+
+// AgentExecutor 중간 단계 타입 정의
+interface AgentStep {
+  action: {
+    tool: string;
+    toolInput: unknown;
+  };
+  observation: unknown;
+}
 
 // 최종 구조화된 출력을 위한 도구 정의
 class FinalPlanTool {
@@ -74,6 +83,7 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
       agent,
       tools,
       verbose: true,
+      returnIntermediateSteps: true,
     });
 
     // AgentExecutor 실행을 Langfuse 스팬으로 감싸기
@@ -85,6 +95,7 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
     // 날짜 범위를 문자열로 변환
     const dateRanges = `${requestData.startDate}부터 ${requestData.endDate}까지`;
     
+    console.log('🔄 1차 LLM 호출: AgentExecutor 실행 시작...');
     const result = await agentExecutor.invoke({
       location: requestData.location,
       date_ranges: dateRanges,
@@ -92,13 +103,55 @@ export async function handleMakePlanLangfuseRequest(requestData: TravelPlanReque
       transportation: requestData.transportation,
       companion: requestData.companion,
       style: requestData.style,
+    }, {
+      callbacks: [langfuseLangchainHandler]
     });
 
     agentSpan.update({ output: result });
     agentSpan.end();
 
-    // AgentExecutor의 output 속성에서 최종 결과 추출
-    const finalStructuredPlan = result.output;
+    // 중간 단계에서 output_travel_plan 도구 호출 여부 확인
+    const intermediateSteps = result.intermediateSteps || [];
+    const outputToolUsed = intermediateSteps.some((step: AgentStep) => 
+      step.action?.tool === 'output_travel_plan'
+    );
+
+    let finalStructuredPlan;
+
+    if (outputToolUsed) {
+      console.log('✅ output_travel_plan 도구 호출됨. 총 LLM 호출: 1회');
+      // output_travel_plan 도구가 사용된 경우, 해당 결과를 찾아서 반환
+      const outputStep = intermediateSteps.find((step: AgentStep) => 
+        step.action?.tool === 'output_travel_plan'
+      );
+      finalStructuredPlan = outputStep?.observation;
+    } else {
+      // output_travel_plan 도구가 사용되지 않은 경우, 강제로 도구 호출
+      console.log('⚠️ output_travel_plan 도구가 호출되지 않음. 2차 LLM 호출 시도...');
+      
+      // 텍스트 결과를 바탕으로 구조화된 계획 생성 시도
+      const textOutput = result.output;
+      
+      try {
+        // withStructuredOutput을 사용한 후처리
+        const parseSpan = trace.span({
+          name: "text-to-structured-parsing",
+          input: { textOutput }
+        });
+        
+        finalStructuredPlan = await parseTextToStructuredPlan(textOutput, requestData, promptConfig);
+        console.log('✅ 2차 LLM 호출 완료. 총 LLM 호출: 2회');
+        
+        parseSpan.update({ output: finalStructuredPlan });
+        parseSpan.end();
+      } catch (parseError) {
+        console.error('텍스트 파싱 실패:', parseError);
+        console.log('🔄 Fallback 계획 생성 (추가 LLM 호출 없음)');
+        
+        // 파싱 실패 시 기본 계획 생성
+        finalStructuredPlan = createFallbackPlan(textOutput, requestData);
+      }
+    }
 
     if (finalStructuredPlan) {
       console.log('✅ 최종 구조화된 여행 계획 생성 완료 (단일 LLM 호출)');
@@ -135,4 +188,49 @@ async function getMakePlanPromptTemplate(prompt: TextPromptClient) {
   }
 
   return promptTemplate;
+}
+
+// 텍스트를 구조화된 계획으로 변환하는 함수
+async function parseTextToStructuredPlan(
+  textOutput: string, 
+  requestData: TravelPlanRequest,
+  promptConfig: PromptConfig
+): Promise<TravelPlan> {
+  // 별도의 LLM 호출로 텍스트를 구조화
+  const model = getModel(promptConfig);
+  const structuredModel = model.withStructuredOutput(TravelPlanSchema);
+  
+  const parsePrompt = `다음 텍스트 여행 계획을 TravelPlanSchema에 맞는 JSON 구조로 변환해주세요:
+
+${textOutput}
+
+원본 요청 정보:
+- 위치: ${requestData.location}
+- 시작일: ${requestData.startDate}  
+- 종료일: ${requestData.endDate}
+- 스타일: ${requestData.style}`;
+
+  return await structuredModel.invoke(parsePrompt, {
+    callbacks: [langfuseLangchainHandler]
+  });
+}
+
+// 기본 계획을 생성하는 함수
+function createFallbackPlan(textOutput: string, requestData: TravelPlanRequest): TravelPlan {
+  return {
+    title: `${requestData.location} 여행 계획`,
+    overview: "AI가 생성한 맞춤형 여행 계획입니다.",
+    assistantMessage: "이 일정이 마음에 드시나요? 수정하고 싶은 부분이 있으시면 말씀해 주세요.",
+    days: [
+      {
+        date: requestData.startDate,
+        morning: "여행지 도착 및 체크인",
+        lunch: "현지 맛집 탐방",
+        afternoon: "주요 관광지 방문",
+        evening: "자유 시간"
+      }
+    ],
+    references: [],
+    planId: requestData.planId
+  };
 }
